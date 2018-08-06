@@ -1,0 +1,7 @@
+{
+    "python.linting.enabled": true,
+
+    "fileheader.tpl": "# @Author: {author}\r\n# @Date: {createTime}\r\n# @Last Modified by:   {lastModifiedBy}\r\n# @Last Modified time: {updateTime}\r\n",
+    "python.linting.pylintEnabled": false,
+    "python.linting.pep8Enabled": true
+}

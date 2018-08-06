@@ -1,9 +1,5 @@
-# @Author: ooooosmon
-# @Date: 2018-08-05 16:35:25
-# @Last Modified by:   ooooosmon
-# @Last Modified time: 2018-08-05 16:35:25
-
 import numpy as np
+import glfw
 
 from OpenGL.GL import *
 
@@ -28,7 +24,7 @@ class ZONE:
             return
 
     def loop(self):
-        self.camera = Camera(Vec3(0, 0, -3))
+        self.camera = Camera(pos=Vec3(0, 0, -3), speed=3)
         shader = Shader('shaders\\basic.vert', 'shaders\\basic.frag')
         shader.use()
 
@@ -51,10 +47,13 @@ class ZONE:
         glEnable(GL_DEPTH_TEST)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         while not self.window.should_close():
+            deltatime = glfw.get_time() - last_time if 'last_time' in dir() else 0
+            last_time = glfw.get_time()
+
             glClearColor(0.1, 0.1, 0.1, 1.0)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-            self.camera.update(self.window.window)
+            self.camera.update(self.window.window, deltatime)
             shader.setMat4('vw_matrix', Mat4.translation(self.camera.position))
 
             # mouse_pos = self.window.get_mouse_position()

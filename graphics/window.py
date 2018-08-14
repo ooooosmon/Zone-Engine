@@ -33,6 +33,7 @@ class Window:
             return False
 
         glfw.make_context_current(self.window)
+        glfw.swap_interval(0)
         glfw.set_framebuffer_size_callback(self.window, self._framebuffer_size_callback)
         glfw.set_cursor_pos_callback(self.window, self._get_cursor_position_callback)
         return True

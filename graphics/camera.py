@@ -20,5 +20,5 @@ class Camera:
             self.position.x -= self.speed * deltatime
         if glfw.get_key(window, glfw.KEY_SPACE) == glfw.PRESS:
             self.position.y -= self.speed * deltatime
-        if glfw.get_key(window, glfw.KEY_LEFT_CONTROL) == glfw.PRESS:
+        if glfw.get_key(window, glfw.KEY_LEFT_SHIFT) == glfw.PRESS:
             self.position.y += self.speed * deltatime

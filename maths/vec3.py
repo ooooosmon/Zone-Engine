@@ -1,8 +1,14 @@
+import numpy as np
+from numpy import linalg
+
 class Vec3():
     def __init__(self, x=0, y=0, z=0):
         self.x = x
         self.y = y
         self.z = z
+
+    def normalize(self):
+        return linalg.norm(np.array([self.x, self.y, self.z]))
 
     def add(self, other):
         self.x += other.x

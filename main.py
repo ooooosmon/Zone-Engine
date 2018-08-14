@@ -46,6 +46,9 @@ class ZONE:
         glEnable(GL_CULL_FACE)
         glEnable(GL_DEPTH_TEST)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        timer = 0.0     # for calculate show fps per second
+        time = 0.0      # current time
+        frames = 0.0    # fps
         while not self.window.should_close():
             deltatime = glfw.get_time() - last_time if 'last_time' in dir() else 0
             last_time = glfw.get_time()
@@ -70,6 +73,14 @@ class ZONE:
             # quad2.render()
 
             self.window.loop()
+
+            # Calculate FPS
+            time += deltatime
+            frames += 1.0
+            if time - timer >= 1.0:
+                timer += 1.0
+                print("fps: {}".format(frames))
+                frames = 0
 
         self.window.close()
 

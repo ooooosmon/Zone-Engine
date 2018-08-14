@@ -46,8 +46,8 @@ class Object:
         self.VAO.bind()
         self.IBO.bind()
 
-        glBindTexture(GL_TEXTURE_2D, self.texture);
         self.shader.setMat4('ml_matrix', Mat4.translation(self.position))
+        glBindTexture(GL_TEXTURE_2D, self.texture);
         glDrawElements(GL_TRIANGLES, vertex_count, GL_UNSIGNED_INT, None)
 
         self.IBO.unbind()

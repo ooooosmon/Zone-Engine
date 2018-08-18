@@ -23,10 +23,8 @@ class ZONE:
             self.window.close()
             return
 
-    def loop(self):
-        self.camera = Camera(pos=Vec3(0, 0, -3), speed=3)
-        shader = Shader('shaders\\basic.vert', 'shaders\\basic.frag')
-        shader.use()
+        self.walkable_objects = []
+        self.all_object = {}
 
         # shader.setMat4('pr_matrix', Mat4.orthographic(0.0, 16.0, 0.0, 9.0, -0.1, 100.0))
         shader.setMat4('pr_matrix', Mat4.perspective(45.0, self.window.width/self.window.height, -0.1, 100.0))

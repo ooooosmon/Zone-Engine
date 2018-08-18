@@ -9,10 +9,18 @@ from graphics.camera import *
 from render.object2d import *
 from render.object3d import *
 from render.shader import *
+from components.physicals.gravity import *
+from components.physicals.collision import *
 
 WIDTH = 1120
 HEIGHT = 630
 APP_TITLE = "ZONE"
+SHOW_FPS = False
+
+class ObjectType():
+    PLAYER = 0
+    GROUND = 1
+    WALL   = 2
 
 class ZONE:
     def __init__(self):
@@ -23,23 +31,37 @@ class ZONE:
             self.window.close()
             return
 
-        self.walkable_objects = []
         self.all_object = {}
+        self.walkable_objects = []
 
-        # shader.setMat4('pr_matrix', Mat4.orthographic(0.0, 16.0, 0.0, 9.0, -0.1, 100.0))
-        shader.setMat4('pr_matrix', Mat4.perspective(45.0, self.window.width/self.window.height, -0.1, 100.0))
-        shader.setVec2('light_pos', Vec2(1, 1))
-        shader.setVec3('light_color', Vec3(1, 1, 1))
+    def run(self):
+        self.camera = Camera(pos=Vec3(0, 0, 0), speed=3)
+        # shader = Shader('shaders\\basic.vert', 'shaders\\basic.frag')
+        # shader.use()
+        shader2d = Shader('shaders\\basic2d.vert', 'shaders\\basic2d.frag')
+        shader2d.use()
 
-        # quad1 = Object2D(shader, Vec3(0, 0, 0), Vec3(1, 1, 1), Vec3(1, 0, 1))
-        # quad2 = Object2D(shader, Vec3(1, 1, 0), Vec3(1, 1, 1), Vec3(1, 1, 1))
-        cube1 = Object3D(shader, Vec3(0, 0, 0), Vec3(1, 1, 1), Vec3(1, 1, 1), 'res\\container2.png')
-        cube2 = Object3D(shader, Vec3(1, 1, -1), Vec3(1, 1, 1), Vec3(1, 1, 1), 'res\\container2.png')
-        cube3 = Object3D(shader, Vec3(2, 2, -2), Vec3(1, 1, 1), Vec3(1, 1, 1), 'res\\container2.png')
-        cube4 = Object3D(shader, Vec3(2, 2, 0), Vec3(1, 1, 1), Vec3(1, 1, 1), 'res\\container2.png')
-        cube5 = Object3D(shader, Vec3(0, 3, 0), Vec3(1, 1, 1), Vec3(1, 1, 1), 'res\\container2.png')
-        cube6 = Object3D(shader, Vec3(5, 5, 0), Vec3(1, 1, 1), Vec3(1, 1, 1), 'res\\container2.png')
-        cube7 = Object3D(shader, Vec3(3, 3, 0), Vec3(1, 1, 1), Vec3(1, 1, 1), 'res\\container2.png')
+        shader2d.setMat4('pr_matrix', Mat4.orthographic(-8.0, 8.0, -4.5, 4.5, -0.1, 100.0))
+        shader2d.setVec2('light_pos', Vec2(1, 1))
+        shader2d.setVec3('light_color', Vec3(1, 1, 1))
+        # shader.setMat4('pr_matrix', Mat4.orthographic(-8.0, 8.0, -4.5, 4.5, -0.1, 100.0))
+        # shader.setMat4('pr_matrix', Mat4.perspective(45.0, self.window.width/self.window.height, -0.1, 100.0))
+        # shader.setVec2('light_pos', Vec2(1, 1))
+        # shader.setVec3('light_color', Vec3(1, 1, 1))
+        ground_color = Vec3(1, 1, 1)
+
+        obj_type = ObjectType()
+        player  = self.all_object['player'] = Object2D(obj_type.PLAYER, shader2d, Vec3(0, 1.5, 0), Vec3(0.5, 1.1, 1), Vec3(81/255, 171/255, 232/255))
+        quad1   = self.all_object['quad1']  = Object2D(obj_type.GROUND, shader2d, Vec3(0, 0, 0), Vec3(1, 1, 1), ground_color)
+        # quad2   = self.all_object['quad 2']  = Object2D(obj_type.WALL, shader2d, Vec3(1, 1, 0), Vec3(1, 1, 1), ground_color)
+        # quad2   = self.all_object['quad3']  = Object2D(obj_type.WALL, shader2d, Vec3(-1, 1, 0), Vec3(1, 1, 1), ground_color)
+
+        for item in self.all_object.values():
+            if item.type is obj_type.GROUND or item.type is obj_type.WALL:
+                self.walkable_objects.append(item)
+
+        player.add_component('collision', Collision())
+        player.add_component('gravity', Gravity(0.0001, -0.001))
 
         glEnable(GL_CULL_FACE)
         glEnable(GL_DEPTH_TEST)
@@ -54,19 +76,33 @@ class ZONE:
             glClearColor(0.1, 0.1, 0.1, 1.0)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-            self.camera.update(self.window.window, deltatime)
-            shader.setMat4('vw_matrix', Mat4.translation(self.camera.position))
+            # self.camera.update(self.window.window, deltatime)
+            speed = 0.005
+            if glfw.get_key(self.window.window, glfw.KEY_A) == glfw.PRESS:
+                player.position.x -= speed
+            if glfw.get_key(self.window.window, glfw.KEY_D) == glfw.PRESS:
+                player.position.x += speed
+            if glfw.get_key(self.window.window, glfw.KEY_SPACE) == glfw.PRESS:
+                player.components['gravity'].add_force(0.003)
+            # if glfw.get_key(window, glfw.KEY_LEFT_SHIFT) == glfw.PRESS:
+            #     self.position.y += self.speed * deltatime
+
+
+            # shader.setMat4('vw_matrix', Mat4.translation(self.camera.position))
+            shader2d.setMat4('vw_matrix', Mat4.translation(self.camera.position))
 
             # mouse_pos = self.window.get_mouse_position()
             # shader.setVec2('light_pos', Vec2(mouse_pos.x * (16.0 / self.window.width), 9.0 - mouse_pos.y * (9.0 / self.window.height)))
 
-            cube1.render()
-            cube2.render()
-            cube3.render()
-            cube4.render()
-            cube5.render()
-            cube6.render()
-            cube7.render()
+            for obj in self.all_object.values():
+                obj.physical_effect(self.walkable_objects)
+                obj.render()
+
+            # player.physical_effect(self.walkable_objects)
+            # quad1.physical_effect(None)
+            # quad2.physical_effect(None)
+
+            # player.render()
             # quad1.render()
             # quad2.render()
 
@@ -77,10 +113,11 @@ class ZONE:
             frames += 1.0
             if time - timer >= 1.0:
                 timer += 1.0
-                print("fps: {}".format(frames))
+                if SHOW_FPS:
+                    print("fps: {}".format(frames))
                 frames = 0
 
         self.window.close()
 
 game = ZONE()
-game.loop()
+game.run()

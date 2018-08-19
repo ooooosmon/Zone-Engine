@@ -2,154 +2,176 @@ from maths import *
 from components.component import *
 import copy
 
-class CollisionDirect():
-    NONE    = 'NONE'
-    TOP     = 'TOP'
-    BOTTOM  = 'BOTTOM'
-    LEFT    = 'LEFT'
-    RIGHT   = 'RIGHT'
 
+class ObjectState:
+    def __init__(self, target, enter=False, still=False, leave=False):
+        self._states = {
+            'target': target,
+            'states': [],
+            'enter': enter,
+            'still': still,
+            'leave': leave }
+
+    def set_target(self, target):
+        self._states['target'] = target
+    def set_states(self, states):
+        self._states['states'] = states
+    def set_enter(self, value):
+        self._states['enter'] = value
+    def set_still(self, value):
+        self._states['still'] = value
+    def set_leave(self, value):
+        self._states['leave'] = value
+
+    def compare(self, target):
+        if target is self.get_target():
+            return True
+        return False
+
+    def get_target(self):
+        return self._states['target']
+    def get_states(self):
+        return self._states['states']
+    def get_enter(self):
+        return self._states['enter']
+    def get_still(self):
+        return self._states['still']
+    def get_leave(self):
+        return self._states['leave']
 
 class Collision(Component):
     def __init__(self):
         super().__init__()
 
-        self.enter = False
-        self.still = False
-        self.leave = False
-        self.collision_obj = None
+        self.triggered_objs = []
 
-    def init(self, components):
-        super().init(components)
+    def init(self, parent):
+        super().init(parent)
 
-    def apply_effect(self, obj, targets):
+    def apply_effect(self, obj, target):
         if not self.enable: return
 
         self.position = obj.position
         self.size = obj.size
+        self.target = None
 
-        for target in targets:
-            self.detect(target)
+        self.detect(target)
 
-    # def collision_detect(self, target):
-    #     self_top = round(self.position.y + self.size.y / 2, 3)
-    #     self_bottom = round(self.position.y - self.size.y / 2, 3)
-    #     self_left = round(self.position.x - self.size.x / 2, 3)
-    #     self_right = round(self.position.x + self.size.x / 2, 3)
-    #     target_top = round(target.position.y + target.size.y / 2, 3)
-    #     target_bottom = round(target.position.y - target.size.y / 2, 3)
-    #     target_left = round(target.position.x - target.size.x / 2, 3)
-    #     target_right = round(target.position.x + target.size.x / 2, 3)
-
-    #     # If object has no any collision below condition will true
-    #     cond_ho_top    = self_top  < target_bottom > self_bottom
-    #     cond_ho_bottom = self_top  > target_top    < self_bottom
-    #     cond_vo_left   = self_left > target_right  < self_right
-    #     cond_vo_right  = self_left < target_left   > self_right
-
-    #     cond_hi_top    = self_top >= target_bottom >= self_bottom
-    #     cond_hi_bottom = self_bottom < target_top < self_top
-    #     cond_vi_left   = self_left <= target_right <= self_right or (self_left < target_right > self_right and self_left > target_left < self_right)
-    #     cond_vi_right  = self_right > target_left >= self_left or (self_left < target_right > self_right and self_left > target_left < self_right)
-
-    #     if cond_ho_top or cond_ho_bottom or cond_vo_left or cond_vo_right:
-    #         # Has no any coliision happen.
-    #         return CollisionDirect.NONE
-    #     else:
-    #         if self_bottom < target_top < self_top and (cond_vi_left or cond_vi_right):
-    #             return CollisionDirect.BOTTOM # self bottom
-    #         elif self_bottom < target_bottom < self_top and (cond_vi_left or cond_vi_right):
-    #             return CollisionDirect.TOP # self top
-    #         elif self_left < target_left < self_right and (cond_hi_top or cond_hi_bottom):
-    #             return CollisionDirect.RIGHT # self right
-    #         elif self_left < target_right < self_right and (cond_hi_top or cond_hi_bottom):
-    #             return CollisionDirect.LEFT #self left
-    #         else:
-    #             return CollisionDirect.NONE
     def collision_detect(self, target):
-        self_top = self.position.y + self.size.y / 2
-        self_bottom = self.position.y - self.size.y / 2
-        self_left = self.position.x - self.size.x / 2
-        self_right = self.position.x + self.size.x / 2
-        target_top = target.position.y + target.size.y / 2
-        target_bottom = target.position.y - target.size.y / 2
-        target_left = target.position.x - target.size.x / 2
-        target_right = target.position.x + target.size.x / 2
+        x_distance = abs(self.position.x - target.position.x)
+        y_distance = abs(self.position.y - target.position.y)
+        x_keep_dis = (self.size.x / 2) + (target.size.x / 2)
+        y_keep_dis = (self.size.y / 2) + (target.size.y / 2)
+        x_offset = abs((self.size.x / 2 + target.size.x / 2) - abs(self.position.x - target.position.x))
+        y_offset = abs((self.size.y / 2 + target.size.y / 2) - abs(self.position.y - target.position.y))
+        states = []
 
-        if abs(target_top - self_bottom) < 0.1:
-            self_bottom = target_top
+        # FIXME: detect collision direction
+        def find_direction():
+            if self.position.x < target.position.x and abs(x_distance - x_keep_dis) < 0.1:
+                # right happen
+                states.append(CollisionDir.RIGHT)
+            elif self.position.x > target.position.x and abs(x_distance - x_keep_dis) < 0.1:
+                # left happen
+                states.append(CollisionDir.LEFT)
 
-        cond_right  = target_right > self_right > target_left and target_right > self_left < target_left
-        cond_left   = target_left < self_left < target_right and target_left < self_right > target_right
-        cond_vboth  = target_right > self_left > target_left and target_left < self_right < target_right
-        cond_bottom = target_bottom < self_bottom <= target_top and target_bottom <= self_top >= target_top
-        cond_top    = target_top > self_top > target_bottom and target_bottom > self_bottom < target_top
-        cond_hboth  = target_bottom < self_top < target_top and target_top > self_bottom > target_bottom
+            if self.position.y < target.position.y and abs(y_distance - y_keep_dis) < 0.1:
+                # top happen
+                states.append(CollisionDir.TOP)
+            elif self.position.y > target.position.y and abs(y_distance - y_keep_dis) < 0.1:
+                # bottom happen
+                states.append(CollisionDir.BOTTOM)
+        def offset_pos():
+            for status in states:
+                if status is CollisionDir.TOP:
+                    self.position.y -= y_offset
+                if status is CollisionDir.BOTTOM:
+                    self.position.y += y_offset
+                if status is CollisionDir.LEFT:
+                    self.position.x += x_offset
+                if status is CollisionDir.RIGHT:
+                    self.position.x -= x_offset
 
-        # if not(cond_right) and not(cond_left) and not(cond_top) and not(cond_bottom):
-        #     # Has no any coliision happen.
-        #     return CollisionDirect.NONE
-        # else:
-        if cond_right and not(cond_left) and (cond_top or cond_bottom or cond_hboth):
-            return CollisionDirect.RIGHT # self right
-        if cond_left and not(cond_right) and (cond_top or cond_bottom or cond_hboth):
-            return CollisionDirect.LEFT #self left
-        if cond_top and not(cond_bottom) and (cond_left or cond_right or cond_vboth):
-            return CollisionDirect.TOP # self top
-        if cond_bottom and not(cond_top) and (cond_left or cond_right or cond_vboth):
-            return CollisionDirect.BOTTOM # self bottom
+        # 1. Detect has any collision happen
+        if x_distance <= x_keep_dis and y_distance <= y_keep_dis:
+            # Collision happen
+            # 2. Find out collision happen where direction.
+            find_direction()
+            # 3. Fix up offset
+            offset_pos()
+        else:
+            # Collision no happen
+            states.append(CollisionDir.NONE)
 
-        return CollisionDirect.NONE
+        return states
 
     def detect(self, target):
-        if not self.enable:
-            return False
-
-        self.status = self.collision_detect(target)
+        states = self.collision_detect(target)
         is_collision = False
-        result = is_collision, self.status, self.position
 
-        if self.status is not CollisionDirect.NONE:
+        if not self.is_exist_in_triggered_objects(target):
+            self.triggered_objs.append(ObjectState(target))
+        target_index = self.get_triggered_obj_index(target)
+
+        self.triggered_objs[target_index].set_states(states)
+
+        if states[0] is not CollisionDir.NONE:
             # Has collision happen
-            self.leave = False
-
-            if not self.leave and self.enter:
-                # The object still trigger collision
-                self.still = True
-                self.enter = False
-            if not self.enter and not self.still and not self.leave:
-                # The object is first trigger collision
-                self.enter = True
-
-            if self.status is CollisionDirect.LEFT:
-                self.position.x = target.position.x + target.size.x / 2 + self.size.x / 2
-                # self.position.x += (target.size.x / 2 + self.size.x / 2) - abs(target.position.x - self.position.x)
-            if self.status is CollisionDirect.RIGHT:
-                self.position.x = target.position.x - target.size.x / 2 - self.size.x / 2
-                # self.position.x -= (target.size.x / 2 + self.size.x / 2) - abs(target.position.x - self.position.x)
-            if self.status is CollisionDirect.TOP:
-                self.position.y = target.position.y - target.size.y / 2 - self.size.y / 2
-                # self.position.y -= (target.size.y / 2 + self.size.y / 2) - abs(target.position.y - self.position.y)
-            if self.status is CollisionDirect.BOTTOM:
-                self.position.y = target.position.y + target.size.y / 2 + self.size.y / 2
-                # self.position.y += (target.size.y / 2 + self.size.y / 2) - abs(target.position.y - self.position.y)
+            self.triggered_objs[target_index].set_target(target)
+            self.triggered_objs[target_index].set_leave(False)
 
             is_collision = True
         else:
             # Has no any collision
-            self.leave = True
-            self.still = False
+            self.triggered_objs[target_index].set_enter(False)
+            self.triggered_objs[target_index].set_still(False)
+            self.triggered_objs[target_index].set_leave(True)
 
             is_collision = False
 
-        self.status = self.collision_detect(target)
-        result = (is_collision, self.status)
+        # The object still trigger collision
+        if self.triggered_objs[target_index].get_enter() and not self.triggered_objs[target_index].get_still() and not self.triggered_objs[target_index].get_leave():
+            self.triggered_objs[target_index].set_enter(False)
+            self.triggered_objs[target_index].set_still(True)
+            self.triggered_objs[target_index].set_leave(False)
+        # The object is first trigger collision
+        if not self.triggered_objs[target_index].get_enter() and not self.triggered_objs[target_index].get_still() and not self.triggered_objs[target_index].get_leave():
+            self.triggered_objs[target_index].set_enter(True)
+            self.triggered_objs[target_index].set_still(False)
+            self.triggered_objs[target_index].set_leave(False)
+        # The object leave trigger
+        if self.triggered_objs[target_index].get_leave():
+            self.triggered_objs[target_index].set_enter(False)
+            self.triggered_objs[target_index].set_still(False)
+            self.triggered_objs[target_index].set_leave(True)
 
+        result = (is_collision, states)
         return result
 
-    def get_first(self):
-        return self.enter
-    def get_still(self):
-        return self.still
-    def get_leave(sefl):
-        return self.leave
+    def get_states(self, target=None):
+        if target:
+            return self.triggered_objs[self.get_triggered_obj_index(target)]
+
+        states = []
+        for elem in self.triggered_objs:
+            for state in elem.get_states():
+                states.append(state)
+        return states
+    def get_first(self, target):
+        return self.triggered_objs[self.get_triggered_obj_index(target)].get_enter()
+    def get_still(self, target):
+        return self.triggered_objs[self.get_triggered_obj_index(target)].get_still()
+    def get_leave(self, target):
+        return self.triggered_objs[self.get_triggered_obj_index(target)].get_leave()
+
+    def is_exist_in_triggered_objects(self, target):
+        for elem in self.triggered_objs:
+            if elem.compare(target):
+                return True
+        return False
+
+    def get_triggered_obj_index(self, target):
+        for i, elem in enumerate(self.triggered_objs):
+            if elem.compare(target):
+                return i
+        return -1
